@@ -1641,8 +1641,11 @@ summary {
 <p>Todas as explicações das variáveis seguem como base as especificações da API.</p>
 <p>As bibliotecas necessárias para a execução das funções serão instaladas automaticamente no cliente, caso seja necessário.</p>
 <p>Inserção bibliotecas necessárias.</p>
-<pre class="r"><code>if(!require(rjson)) install.packages(&quot;rjson&quot;);require(rjson)
-if(!require(jsonlite)) install.packages(&quot;jsonlite&quot;);require(jsonlite)</code></pre>
+<pre class="r"><code>if(!require(dplyr)) install.packages(&quot;dplyr&quot;);require(dplyr)
+if(!require(rjson)) install.packages(&quot;rjson&quot;);require(rjson)
+if(!require(jsonlite)) install.packages(&quot;jsonlite&quot;);require(jsonlite)
+if(!require(rio)) install.packages(&quot;rio&quot;);require(rio)
+if(!require(RCurl)) install.packages(&quot;RCurl&quot;);require(RCurl)</code></pre>
 <p>Url’s bases, que foram utilizadas da API.</p>
 <pre class="r"><code>casos_url &lt;- &quot;https://brasil.io/api/dataset/covid19/caso/data/&quot;
 boletim_url &lt;- &quot;https://brasil.io/api/dataset/covid19/boletim/data/&quot;
@@ -2077,8 +2080,11 @@ obito_cartorio_url &lt;- &quot;https://brasil.io/api/dataset/covid19/obito_carto
 <p>Fonte: Secretarias de Saúde das Unidades Federativas, dados tratados por Álvaro Justen e colaboradores/Brasil.IO.</p>
 <p>API: <a href="https://github.com/turicas/covid19-br/blob/master/api.md" class="uri">https://github.com/turicas/covid19-br/blob/master/api.md</a></p>
 <p>Bibliotecas:</p>
+<p>dplyr (<a href="https://cran.r-project.org/web/packages/dplyr/index.html" class="uri">https://cran.r-project.org/web/packages/dplyr/index.html</a>)</p>
 <p>rjson (<a href="https://cran.r-project.org/web/packages/rjson/rjson.pdf" class="uri">https://cran.r-project.org/web/packages/rjson/rjson.pdf</a>)</p>
 <p>jsonlite (<a href="https://cran.r-project.org/web/packages/jsonlite/jsonlite.pdf" class="uri">https://cran.r-project.org/web/packages/jsonlite/jsonlite.pdf</a>)</p>
+<p>rio (<a href="https://cran.r-project.org/web/packages/rio/rio.pdf" class="uri">https://cran.r-project.org/web/packages/rio/rio.pdf</a>)</p>
+<p>RCurl (<a href="https://cran.r-project.org/web/packages/RCurl/RCurl.pdf" class="uri">https://cran.r-project.org/web/packages/RCurl/RCurl.pdf</a>)</p>
 
 
 
