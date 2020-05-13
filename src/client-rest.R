@@ -1,6 +1,9 @@
 
+if(!require(dplyr)) install.packages("dplyr");require(dplyr)
 if(!require(rjson)) install.packages("rjson");require(rjson)
 if(!require(jsonlite)) install.packages("jsonlite");require(jsonlite)
+if(!require(rio)) install.packages("rio");require(rio)
+if(!require(RCurl)) install.packages("RCurl");require(RCurl)
 
 casos_url <- "https://brasil.io/api/dataset/covid19/caso/data/"
 boletim_url <- "https://brasil.io/api/dataset/covid19/boletim/data/"
@@ -164,3 +167,4 @@ obito_cartorio<-function(date,state,epidemiological_week_2019,
   result <- fromJSON(getURL(full_url))
   return(generate_table(result))
 }
+

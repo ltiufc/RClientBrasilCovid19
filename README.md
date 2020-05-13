@@ -6,8 +6,17 @@ Todas as explicações das variáveis seguem como base as especificações da AP
 As bibliotecas necessárias para a execução das funções serão instaladas automaticamente no cliente, caso seja necessário.
 
 Boibliotecas necessárias:
+require(dplyr)
 require(rjson)
 require(jsonlite)
+require(rio)
+require(RCurl)
+
+Para utilizar as funções será necessário baixar o arquivo src e colocar no seu projeto. Com isso basta usar a função source(), para inserir o arquivo, lltere o caminho conforme for necessário.
+Exemplo:
+source('/src/client-rest.R')
+
+
 
 ### Funções tabela casos
 
@@ -305,12 +314,20 @@ obito_cartorio("município","","SP")
 
 obito_cartorio("","","")
 
+Documentação: https://htmlpreview.github.io/?https://github.com/ltiufc/RClientBrasilCovid19/blob/master/doc/documentacao.html
 
 Fonte: Secretarias de Saúde das Unidades Federativas, dados tratados por Álvaro Justen e colaboradores/Brasil.IO.
 
 API: https://github.com/turicas/covid19-br/blob/master/api.md
 
 Bibliotecas:
+
+dplyr (https://cran.r-project.org/web/packages/dplyr/index.html)
+
 rjson (https://cran.r-project.org/web/packages/rjson/rjson.pdf)
+
 jsonlite (https://cran.r-project.org/web/packages/jsonlite/jsonlite.pdf)
 
+rio (https://cran.r-project.org/web/packages/rio/rio.pdf)
+
+RCurl (https://cran.r-project.org/web/packages/RCurl/RCurl.pdf)

@@ -1,0 +1,745 @@
+---
+title: "Documentação"
+output:
+  html_document:
+    df_print: paged
+---
+
+Cliente R que consome os dados da API https://brasil.io/api/dataset/covid19/
+
+Todas as explicações das variáveis seguem como base as especificações da API.
+
+As bibliotecas necessárias para a execução das funções serão instaladas automaticamente no cliente, caso seja necessário.
+
+Inserção bibliotecas necessárias. 
+```{r eval=FALSE, include=TRUE}
+if(!require(dplyr)) install.packages("dplyr");require(dplyr)
+if(!require(rjson)) install.packages("rjson");require(rjson)
+if(!require(jsonlite)) install.packages("jsonlite");require(jsonlite)
+if(!require(rio)) install.packages("rio");require(rio)
+if(!require(RCurl)) install.packages("RCurl");require(RCurl)
+```
+
+Url's bases, que foram utilizadas da API.
+
+```{r eval=FALSE, include=TRUE}
+casos_url <- "https://brasil.io/api/dataset/covid19/caso/data/"
+boletim_url <- "https://brasil.io/api/dataset/covid19/boletim/data/"
+caso_full_url <- "https://brasil.io/api/dataset/covid19/caso_full/data/"
+obito_cartorio_url <- "https://brasil.io/api/dataset/covid19/obito_cartorio/data/"
+```
+
+Função para criar a tabela de acordo com a função que foi requisitada pelo usuário.
+
+```{r eval=FALSE, include=TRUE}
+generate_table<-function(result){ #recebe como parâmetro o resultado da função
+  table <- data.frame(result[["results"]]) #cria dara frame de acordo com o resultado
+  if(length(table) != 0){
+    if(is.null(result[["next"]]) == FALSE){ #verifica se existe mais resultados(API limita num de resultados por página)
+      result_page <- fromJSON(getURL(result[["next"]])) #pega as prox. paginas
+      if(is.null(result_page[["next"]]) == TRUE){
+        table_page <- data.frame(result_page[["results"]])
+        table <- rbind(table, table_page)
+      }
+      while(is.null(result_page[["next"]]) == FALSE){ 
+        table_page <- data.frame(result_page[["results"]])
+        table <- rbind(table, table_page)
+        result_page <- fromJSON(getURL(result_page[["next"]]))
+        if(is.null(result_page[["next"]]) == TRUE){
+          table_page <- data.frame(result_page[["results"]])
+          table <- rbind(table, table_page)
+        }
+      } 
+    }
+    
+    for(i in 1:ncol(table)){
+      table[,i]=iconv(table[,i], from="UTF-8", to="LATIN1")
+    }
+    
+    return(table)
+  }
+  return("Nenhum resultado!")
+}
+```
+
+Funções de casos
+
+casos- boletins das Secretarias Estaduais de Saúde e, por isso, não possui valores para todos os municípios e todas as datas.
+
+Variáveis:
+
+* search: passe algum valor para executar a busca por texto completo, que compreende algumas das colunas da tabela.
+
+* date: data de coleta dos dados no formato YYYY-MM-DD.
+
+* state: sigla da unidade federativa, exemplo: SP.
+
+* city: nome do município (pode estar em branco quando o registro é referente ao estado, pode ser preenchido com Importados/Indefinidos também).
+
+* place_type: tipo de local que esse registro descreve, pode ser city ou state.
+
+* order_for_place: número que identifica a ordem do registro para este local. O registro referente ao primeiro boletim em que esse local aparecer será contabilizado como 1 e os demais boletins incrementarão esse valor.
+
+* is_last: campo pré-computado que diz se esse registro é o mais novo para esse local, pode ser True ou False (caso filtre por esse campo, use is_last=True ou is_last=False, não use o valor em minúsculas).
+
+* city_ibge_code: código IBGE do local.
+
+* confirmed: número de casos confirmados.
+
+* deaths: número de mortes.
+
+* estimated_population_2019: população estimada para esse município/estado em 2019, segundo o IBGE (acesse o script que faz o download e conversão dos dados de população).
+
+* confirmed_per_100k_inhabitants: número de casos confirmados por 100.000 habitantes.
+
+* death_rate: taxa de mortalidade (mortes / confirmados).
+
+Variáveis que podem ser filtros para a consulta:
+
+* search 
+
+* date 
+
+* state 
+
+* city 
+
+* place_type 
+
+* order_for_place 
+
+* is_last 
+
+* city_ibge_code
+
+Função para requisitar todos os casos.
+
+Exemplo:
+
+casos_todos()
+
+```{r eval=FALSE, include=TRUE}
+casos_todos<-function(){
+  result <- fromJSON(getURL(casos_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos de acordo com os parâmetros is_last e place_type.
+
+Valores possíveis: 
+
+* is_last ("True" ou "False") 
+
+* place_type ("city" ou "state")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+casos_state("True","city")
+
+casos_state("","state")
+
+casos_state("","")
+
+```{r eval=FALSE, include=TRUE}
+casos_state<-function(is_last,place_type){
+  full_url = paste0(casos_url, "?is_last=", is_last,
+                    "&place_type=", place_type)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos de acordo com os parâmetros is_last e state.
+
+Valores possíveis: 
+
+* is_last ("True" ou "False") 
+
+* state (sigla do estado, exemplo "CE")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+casos_more_state("True","CE")
+
+casos_more_state("","SP")
+
+casos_more_state("","")
+
+```{r eval=FALSE, include=TRUE}
+casos_more_state<-function(is_last,state){
+  full_url = paste0(casos_url, "?is_last=", is_last,
+                    "&state=", state)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos de acordo com os parâmetros is_last e city.
+
+Valores possíveis: 
+
+* is_last ("True" ou "False") 
+
+* city (nome do município, exemplo "Russas")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+casos_more_city("False","Guaraciaba do Norte")
+
+casos_more_city("","Apiaí")
+
+casos_more_city("","")
+
+```{r eval=FALSE, include=TRUE}
+casos_more_city<-function(is_last,city){
+  full_url = paste0(casos_url, "?is_last=", is_last,
+                    "&city=", city)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos de acordo com os parâmetros date, state e city.
+
+Valores possíveis: 
+
+* date (data no formato YYYY-MM-DD, exemplo "2020-04-01")
+
+* state (sigla do estado, exemplo "MG")
+
+* city (nome do município, exemplo "Além Paraíba")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+casos_date("2020-04-01","AM","Anori")
+
+casos_date("2020-03-28","SP","")
+
+casos_date("","","")
+
+```{r eval=FALSE, include=TRUE}
+casos_date<-function(date,state,city){
+  full_url = paste0(casos_url, "?date=", date,
+                    "&state=", state, "&city=", city)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos de acordo com os parâmetros search, date, state, city, place_type, order_for_place, is_last e city_ibge_code.
+
+Valores possíveis: 
+
+* search (valor parar buscar, exemplo "Jaru")
+
+* date (data no formato YYYY-MM-DD, exemplo "2020-04-01")
+
+* state (sigla do estado, exemplo "MG")
+
+* city (nome do município, exemplo "Além Paraíba")
+
+* place_type ("city" ou "state")
+
+* order_for_place (número inteiro, exemplo "10")
+
+* is_last ("True" ou "False") 
+
+
+* city_ibge_code (código IBGE do local, exemplo "1100122")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+casos("Jaru","2020-04-01","RO","Jaru","city","1","True","1100114")
+
+casos("","","","","","","","")
+
+```{r eval=FALSE, include=TRUE}
+casos<-function(search,date,state,city,place_type,
+                order_for_place,is_last,city_ibge_code){
+  full_url = paste0(casos_url, "?search=", search, "&date=",date, 
+                    "&state=", state,"&city=", city, 
+                    "&place_type=", place_type, 
+                    "&order_for_place=", order_for_place,
+                    "&is_last=", is_last, "&city_ibge_code=", city_ibge_code)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Funções de boletins
+
+boletim- boletins publicados pelas Secretarias Estaduais de Saúde.
+
+Variáveis:
+
+* search: passe algum valor para executar a busca por texto completo, que compreende algumas das colunas da tabela.
+
+* date: data do boletim no formato YYYY-MM-DD.
+
+* state: sigla da unidade federativa, exemplo: SP.
+
+* url: link para o boletim.
+
+* notes: observações sobre esse boletim.
+
+Variáveis que podem ser filtros para a consulta:
+
+* search
+
+* date
+
+* state
+
+Função para requisitar todos os boletins.
+
+Exemplo:
+
+boletim_todos()
+
+```{r eval=FALSE, include=TRUE}
+boletim_todos<-function(){
+  result <- fromJSON(getURL(boletim_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos de acordo com os parâmetros search, date e state.
+
+Valores possíveis: 
+
+* search (valor parar buscar, exemplo "Estado")
+
+* date (data no formato YYYY-MM-DD, exemplo "2020-04-01")
+
+* state (sigla do estado, exemplo "MG")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+boletim("registro","2020-05-06","MT")
+
+boletim("município","","SP")
+
+boletim("","","")
+
+```{r eval=FALSE, include=TRUE}
+boletim<-function(search,date,state){
+  full_url = paste0(boletim_url, "?search=", search, "&date=", date, 
+                    "&state=", state)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Funções de casos full
+
+caso_full- casos dos dados por município por dia completos.
+
+Variáveis:
+
+* city: nome do município (pode estar em branco quando o registro é referente ao estado, pode ser preenchido com Importados/Indefinidos também).
+
+* city_ibge_code: código IBGE do local.
+
+* date: data de coleta dos dados no formato YYYY-MM-DD.
+
+* epidemiological_week: número da semana epidemiológica.
+
+* estimated_population_2019: população estimada para esse município/estado em 2019, segundo o IBGE (acesse o script que faz o download e conversão dos dados de população).
+
+* is_last: campo pré-computado que diz se esse registro é o mais novo para esse local, pode ser True ou False (caso filtre por esse campo, use is_last=True ou is_last=False, não use o valor em minúsculas).
+
+* is_repeated: campo pré-computado que diz se as informações nesse registro foram publicadas pela Secretaria Estadual de Saúde no dia date ou se o dado é repetido do último dia em que o dado está disponível (igual ou anterior a date). Isso ocorre pois nem todas as secretarias publicam boletins todos os dias. Veja também o campo last_available_date.
+
+* last_available_confirmed: número de casos confirmados do último dia disponível igual ou anterior à data date.
+
+* last_available_confirmed_per_100k_inhabitants: número de casos confirmados por 100.000 habitantes do último dia disponível igual ou anterior à data date.
+
+* last_available_date: data da qual o dado se refere.
+
+* last_available_death_rate: taxa de mortalidade (mortes / confirmados) do último dia disponível igual ou anterior à data date.
+
+* last_available_deaths: número de mortes do último dia disponível igual ou anterior à data date.
+
+* order_for_place: número que identifica a ordem do registro para este local. O registro referente ao primeiro boletim em que esse local aparecer será contabilizado como 1 e os demais boletins incrementarão esse valor.
+
+* place_type: tipo de local que esse registro descreve, pode ser city ou state.
+
+* state: sigla da unidade federativa, exemplo: SP.
+
+* new_confirmed: número de novos casos confirmados desde o último dia (note que caso is_repeated seja True, esse valor sempre será 0 e que esse valor pode ser negativo caso a SES remaneje os casos desse município para outro).
+
+* new_deaths: número de novos óbitos desde o último dia (note que caso is_repeated seja True, esse valor sempre será 0 e que esse valor pode ser negativo caso a SES remaneje os casos desse município para outro).
+
+Variáveis que podem ser filtros para a consulta:
+
+* city
+
+* city_ibge_code
+
+* date
+
+* epidemiological_week
+
+* is_last
+
+* is_repeated
+
+* last_available_date
+
+* order_for_place
+
+* place_type
+
+* state
+
+Função para requisitar todos os casos full.
+
+Exemplo:
+
+caso_full_todos()
+
+```{r eval=FALSE, include=TRUE}
+caso_full_todos<-function(){
+  result <- fromJSON(getURL(caso_full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos full de acordo com os parâmetros is_last e place_type.
+
+Valores possíveis: 
+
+* is_last ("True" ou "False") 
+
+* place_type ("city" ou "state")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+caso_full_state("True","city")
+
+caso_full_state("","state")
+
+caso_full_state("","")
+
+```{r eval=FALSE, include=TRUE}
+caso_full_state<-function(is_last,place_type){
+  full_url = paste0(caso_full_url, "?is_last=", is_last,
+                    "&place_type=", place_type)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos full de acordo com os parâmetros is_last e state.
+
+Valores possíveis: 
+* is_last ("True" ou "False") 
+
+* state (sigla do estado, exemplo "CE")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+caso_full_more_state("True","CE")
+
+caso_full_more_state("","SP")
+
+caso_full_more_state("","")
+
+```{r eval=FALSE, include=TRUE}
+caso_full_more_state<-function(is_last,state){
+  full_url = paste0(caso_full_url, "?is_last=", is_last,
+                    "&state=", state)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos full de acordo com os parâmetros is_last e city.
+
+Valores possíveis: 
+* is_last ("True" ou "False") 
+
+* city (nome do município, exemplo "Russas")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+caso_full_more_city("False","Guaraciaba do Norte")
+
+caso_full_more_city("","Apiaí")
+
+caso_full_more_city("","")
+
+```{r eval=FALSE, include=TRUE}
+caso_full_more_city<-function(is_last,city){
+  full_url = paste0(caso_full_url, "?is_last=", is_last,
+                    "&city=", city)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos full de acordo com os parâmetros date, state e city.
+
+Valores possíveis: 
+* date (data no formato YYYY-MM-DD, exemplo "2020-04-01")
+
+* state (sigla do estado, exemplo "MG")
+
+* city (nome do município, exemplo "Além Paraíba")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+caso_full_date("2020-04-01","AM","Anori")
+
+caso_full_date("2020-03-28","SP","")
+
+caso_full_date("","","")
+
+```{r eval=FALSE, include=TRUE}
+caso_full_date<-function(date,state,city){
+  full_url = paste0(caso_full_url, "?date=", date,
+                    "&state=", state, "&city=", city)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os casos de acordo com os parâmetros search, date, state, city, place_type, order_for_place, is_last e city_ibge_code.
+
+Valores possíveis: 
+
+* city (nome do município, exemplo "Além Paraíba")
+
+* city_ibge_code (código IBGE do local, exemplo "1100122")
+
+* date (data no formato YYYY-MM-DD, exemplo "2020-04-01")
+
+* epidemiological_week (número inteiro, exemplo "20")
+
+* is_last ("True" ou "False") 
+
+* is_repeated ("True" ou "False")
+
+* last_available_date (data no formato YYYY-MM-DD, exemplo "2020-04-01")
+
+* order_for_place (número inteiro, exemplo "10")
+
+* place_type ("city" ou "state")
+
+* state (sigla do estado, exemplo "MG")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+caso_full("Acrelândia","1200013","2020-05-11","20","True","False","2020-05-10","44","city","AC")
+
+caso_full("","","","","","","","","","")
+
+```{r eval=FALSE, include=TRUE}
+caso_full<-function(city,city_ibge_code,date,epidemiological_week,is_last,
+                    is_repeated,last_available_date,order_for_place,
+                    place_type,state){
+  full_url = paste0(caso_full_url, "?city=", city,
+                    "&city_ibge_code=",city_ibge_code, "&date=", date,
+                    "&epidemiological_week=", epidemiological_week, 
+                    "&is_last=", is_last, "&is_repeated=", is_repeated,
+                    "&last_available_date=", last_available_date,
+                    "&order_for_place=", order_for_place, 
+                    "&place_type=", place_type, "&state=", state)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Funções de óbitos cartório
+
+obito_cartorio- Essa tabela contém dados de óbitos registrados nos cartórios e disponíveis no Portal da Transparência do Registro Civil.
+
+Variáveis:
+
+* date: Data no formato YYYY-MM-DD.
+
+* state: Sigla da unidade federativa com dois dígitos, exemplo: SP.
+
+* epidemiological_week_2019: Número da semana epidemiológica para essa data em 2019.
+
+* epidemiological_week_2020: Número da semana epidemiológica para essa data em 2020.
+
+* deaths_total_2019: Quantidade de óbitos totais para o estado state acumulados no ano de 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_total_2020: Quantidade de óbitos totais para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* new_deaths_total_2019: Quantidade de óbitos totais para o estado state ocorridos no dia/mês de date, porém em 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_covid19: Quantidade de óbitos em decorrência de suspeita ou confirmação de covid19 para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* new_deaths_total_2020: Quantidade de óbitos totais para o estado state ocorridos na data date (em 2020).
+
+* deaths_indeterminate_2019: Quantidade de óbitos de motivo indeterminado para o estado state acumulados no ano de 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_indeterminate_2020: Quantidade de óbitos de motivo indeterminado para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* deaths_others_2019: Quantidade de óbitos em decorrência de outros motivos para o estado state acumulados no ano de 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_others_2020: Quantidade de óbitos em decorrência de outros motivos para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* deaths_pneumonia_2019: Quantidade de óbitos em decorrência de pneumonia para o estado state acumulados no ano de 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_pneumonia_2020: Quantidade de óbitos em decorrência de pneumonia para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* deaths_respiratory_failure_2019: Quantidade de óbitos em decorrência de insuficiência respiratória para o estado state acumulados no ano de 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_respiratory_failure_2020: Quantidade de óbitos em decorrência de insuficiência respiratória para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* deaths_sars_2019: Quantidade de óbitos em decorrência de SRAG para o estado state acumulados no ano de 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_sars_2020: Quantidade de óbitos em decorrência de SRAG para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* deaths_septicemia_2019: Quantidade de óbitos em decorrência de septicemia para o estado state acumulados no ano de 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* deaths_septicemia_2020: Quantidade de óbitos em decorrência de septicemia para o estado state acumulados no ano de 2020 (de 1 de janeiro de 2020 a date).
+
+* new_deaths_covid19: Quantidade de óbitos em decorrência de suspeita ou confirmação de covid19 para o estado state ocorridos na data date (em 2020).
+
+* new_deaths_indeterminate_2019: Quantidade de óbitos de motivo indeterminado para o estado state ocorridos no dia/mês de date, porém em 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* new_deaths_indeterminate_2020: Quantidade de óbitos de motivo indeterminado para o estado state ocorridos na data date (em 2020).
+
+* new_deaths_others_2019: Quantidade de óbitos em decorrência de outros motivos para o estado state ocorridos no dia/mês de date, porém em 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* new_deaths_others_2020: Quantidade de óbitos em decorrência de outros motivos para o estado state ocorridos na data date (em 2020).
+
+* new_deaths_pneumonia_2019: Quantidade de óbitos em decorrência de pneumonia para o estado state ocorridos no dia/mês de date, porém em 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* new_deaths_pneumonia_2020: Quantidade de óbitos em decorrência de pneumonia para o estado state ocorridos na data date (em 2020).
+
+* new_deaths_respiratory_failure_2019: Quantidade de óbitos em decorrência de insuficiência respiratória para o estado state ocorridos no dia/mês de date, porém em 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* new_deaths_respiratory_failure_2020: Quantidade de óbitos em decorrência de insuficiência respiratória para o estado state ocorridos na data date (em 2020).
+
+* new_deaths_sars_2019: Quantidade de óbitos em decorrência de SRAG para o estado state ocorridos no dia/mês de date, porém em 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* new_deaths_sars_2020: Quantidade de óbitos em decorrência de SRAG para o estado state ocorridos na data date (em 2020).
+
+* new_deaths_septicemia_2019: Quantidade de óbitos em decorrência de septicemia para o estado state ocorridos no dia/mês de date, porém em 2019 (de 1 de janeiro de 2019 a dia/mês de date em 2019).
+
+* new_deaths_septicemia_2020: Quantidade de óbitos em decorrência de septicemia para o estado state ocorridos na data date (em 2020).
+
+Variáveis que podem ser filtros para a consulta:
+
+* date
+
+* state
+
+* epidemiological_week_2019
+
+* epidemiological_week_2020
+
+Função para requisitar todos os óbitos registrados em cartório.
+
+Exemplo:
+
+obito_cartorio_todos()
+
+```{r eval=FALSE, include=TRUE}
+obito_cartorio_todos<-function(){
+  result <- fromJSON(getURL(obito_cartorio_url))
+  return(generate_table(result))
+}
+```
+
+Função para requisitar os óbitos registrados em cartório de acordo com os parâmetros date, state, epidemiological_week_2019 e epidemiological_week_2020.
+
+Valores possíveis: 
+
+* date (data no formato YYYY-MM-DD, exemplo "2020-04-01")
+
+* state (sigla do estado, exemplo "MG")
+
+* epidemiological_week_2019 (número inteiro, exemplo "20")
+
+* epidemiological_week_2020 (número inteiro, exemplo "20")
+
+Obs.: os parâmetros podem ser passados como vazios "".
+
+Exemplos:
+
+obito_cartorio("2020-05-12","AC","20","20")
+
+obito_cartorio("município","","SP")
+
+obito_cartorio("","","")
+
+```{r eval=FALSE, include=TRUE}
+obito_cartorio<-function(date,state,epidemiological_week_2019,
+                  epidemiological_week_2020){
+  full_url = paste0(obito_cartorio_url, "?date=", date, "&state=", state,
+                    "&epidemiological_week_2019=", epidemiological_week_2019,
+                    "&epidemiological_week_2020=", epidemiological_week_2020)
+  full_url <- URLencode(full_url)
+  result <- fromJSON(getURL(full_url))
+  return(generate_table(result))
+}
+```
+
+Fonte: Secretarias de Saúde das Unidades Federativas, dados tratados por Álvaro Justen e colaboradores/Brasil.IO.
+
+API: https://github.com/turicas/covid19-br/blob/master/api.md
+
+Bibliotecas:
+
+dplyr (https://cran.r-project.org/web/packages/dplyr/index.html)
+
+rjson (https://cran.r-project.org/web/packages/rjson/rjson.pdf)
+
+jsonlite (https://cran.r-project.org/web/packages/jsonlite/jsonlite.pdf)
+
+rio (https://cran.r-project.org/web/packages/rio/rio.pdf)
+
+RCurl (https://cran.r-project.org/web/packages/RCurl/RCurl.pdf)
+
+
+
+
+
+
+
+
+
+
+
+
+
